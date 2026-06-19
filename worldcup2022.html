@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2022 FIFA World Cup Qatar - 32强全阵容</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --primary: #8a1538;
+  --secondary: #00a859;
+  --accent: #f9a825;
+  --dark: #0a1f0a;
+  --glass: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.15);
+}
+body {
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  background: #051105;
+  color: #fff;
+  overflow-x: hidden;
+}
+#canvas-container {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
+}
+nav {
+  position: fixed; top: 0; left: 0; width: 100%; z-index: 100;
+  background: rgba(5,17,5,0.85); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex; justify-content: center; gap: 8px; padding: 12px 20px; flex-wrap: wrap;
+}
+nav a {
+  color: #ccc; text-decoration: none; padding: 8px 18px; border-radius: 20px;
+  font-size: 14px; font-weight: 500; transition: all 0.3s; border: 1px solid transparent;
+}
+nav a:hover, nav a.active { color: #fff; background: rgba(138,21,56,0.4); border-color: var(--primary); }
+
+section { position: relative; z-index: 1; padding: 80px 20px; max-width: 1400px; margin: 0 auto; }
+.hero {
+  min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center; padding-top: 100px;
+}
+.hero h1 { font-size: clamp(36px, 6vw, 72px); font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 40px rgba(138,21,56,0.5); margin-bottom: 10px; }
+.hero h2 { font-size: clamp(18px, 2.5vw, 32px); color: var(--secondary); font-weight: 300; margin-bottom: 20px; }
+.hero .badge { display: inline-block; padding: 8px 24px; border-radius: 30px; background: linear-gradient(135deg, var(--primary), var(--secondary)); font-weight: 600; font-size: 14px; margin-top: 10px; }
+.hero .meta { margin-top: 20px; color: #aaa; font-size: 14px; }
+
+.section-title { font-size: 32px; font-weight: 800; margin-bottom: 40px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.section-title::before, .section-title::after { content: ''; width: 40px; height: 3px; background: linear-gradient(90deg, transparent, var(--accent)); } 
+.section-title::after { background: linear-gradient(90deg, var(--accent), transparent); }
+
+/* Groups */
+.groups-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.group-card {
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px;
+  backdrop-filter: blur(10px); transition: transform 0.3s, box-shadow 0.3s;
+}
+.group-card:hover { transform: translateY(-5px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); border-color: var(--secondary); }
+.group-card .group-label { font-size: 24px; font-weight: 800; color: var(--accent); margin-bottom: 15px; text-align: center; }
+.team-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.team-row:last-child { border-bottom: none; }
+.team-row .flag { font-size: 28px; }
+.team-row .name { flex: 1; font-weight: 600; }
+.team-row .name small { display: block; color: #888; font-size: 12px; font-weight: 400; }
+.team-row .fifa { font-size: 12px; color: #888; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 8px; }
+
+/* Knockout */
+.knockout-container { display: flex; flex-direction: column; gap: 40px; }
+.knockout-round { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.knockout-round .round-title { width: 100%; text-align: center; font-size: 14px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.knockout-match {
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: 12px; padding: 16px; min-width: 220px;
+  backdrop-filter: blur(10px); text-align: center; transition: all 0.3s;
+}
+.knockout-match:hover { border-color: var(--accent); }
+.knockout-match .teams { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 8px; }
+.knockout-match .score { font-size: 20px; color: var(--accent); font-weight: 800; }
+.knockout-match .winner { font-size: 11px; color: var(--secondary); margin-top: 6px; }
+
+/* Scorers */
+.scorers-table { width: 100%; max-width: 800px; margin: 0 auto; background: var(--glass); border-radius: 16px; overflow: hidden; border: 1px solid var(--glass-border); }
+.scorers-table .row { display: grid; grid-template-columns: 60px 1fr 80px 80px 60px; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; }
+.scorers-table .row:hover { background: rgba(255,255,255,0.03); }
+.scorers-table .header { background: rgba(138,21,56,0.3); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.scorers-table .rank { font-weight: 800; color: var(--accent); font-size: 18px; }
+.scorers-table .player-info { display: flex; align-items: center; gap: 12px; }
+.scorers-table .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.scorers-table .goals { font-weight: 800; color: var(--accent); font-size: 18px; text-align: center; }
+.scorers-table .matches, .scorers-table .eff { text-align: center; color: #aaa; }
+
+/* Teams filter */
+.filter-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+.filter-btn {
+  padding: 8px 20px; border-radius: 20px; background: var(--glass); border: 1px solid var(--glass-border);
+  color: #ccc; cursor: pointer; font-size: 13px; transition: all 0.3s;
+}
+.filter-btn:hover, .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* Teams grid */
+.teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.team-card {
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden;
+  backdrop-filter: blur(10px); transition: all 0.3s; cursor: pointer;
+}
+.team-card:hover { transform: translateY(-5px); box-shadow: 0 15px 50px rgba(0,0,0,0.4); border-color: var(--secondary); }
+.team-card.expanded { border-color: var(--accent); }
+.team-header { display: flex; align-items: center; gap: 15px; padding: 20px; background: rgba(0,0,0,0.2); }
+.team-header .flag { font-size: 48px; }
+.team-header .info { flex: 1; }
+.team-header .name { font-size: 20px; font-weight: 800; }
+.team-header .name span { color: #888; font-size: 14px; font-weight: 400; margin-left: 8px; }
+.team-header .meta { display: flex; gap: 10px; margin-top: 6px; font-size: 12px; color: #aaa; }
+.team-header .meta span { background: rgba(255,255,255,0.06); padding: 3px 10px; border-radius: 10px; }
+.team-header .expand-icon { font-size: 20px; transition: transform 0.3s; color: var(--accent); }
+.team-card.expanded .expand-icon { transform: rotate(180deg); }
+
+/* Players */
+.players-list { max-height: 0; overflow: hidden; transition: max-height 0.5s ease; padding: 0 20px; }
+.team-card.expanded .players-list { max-height: 2000px; padding: 0 20px 20px; }
+.player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 15px; }
+.player-card {
+  background: rgba(0,0,0,0.3); border-radius: 12px; padding: 14px; text-align: center;
+  border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; position: relative;
+}
+.player-card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-3px); }
+.player-card.star::before { content: '★'; position: absolute; top: 6px; right: 8px; color: var(--accent); font-size: 16px; }
+.player-card .headshot {
+  width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 10px;
+  background: linear-gradient(135deg, rgba(138,21,56,0.3), rgba(0,168,89,0.3));
+  display: flex; align-items: center; justify-content: center; font-size: 28px; border: 2px solid rgba(255,255,255,0.1);
+}
+.player-card .p-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; line-height: 1.2; }
+.player-card .p-meta { font-size: 11px; color: #888; line-height: 1.6; }
+.player-card .p-pos {
+  display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;
+  margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;
+}
+.pos-GK { background: rgba(249,168,37,0.15); color: var(--accent); }
+.pos-DF { background: rgba(0,168,89,0.15); color: var(--secondary); }
+.pos-MF { background: rgba(33,150,243,0.15); color: #64b5f6; }
+.pos-FW { background: rgba(138,21,56,0.3); color: #e57373; }
+
+/* Final badge */
+.final-match { border: 2px solid var(--accent); position: relative; }
+.final-match::after { content: '🏆'; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 24px; }
+
+footer { text-align: center; padding: 40px 20px; color: #555; font-size: 12px; position: relative; z-index: 1; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #051105; }
+::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+
+@media (max-width: 768px) {
+  .scorers-table .row { grid-template-columns: 40px 1fr 60px 60px 50px; font-size: 13px; }
+  .scorers-table .avatar { display: none; }
+  .player-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .team-header .flag { font-size: 36px; }
+  .knockout-match { min-width: 160px; padding: 12px; }
+}
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+
+<nav id="navbar">
+  <a href="#groups" class="active">分组</a>
+  <a href="#knockout">淘汰赛</a>
+  <a href="#scorers">射手榜</a>
+  <a href="#teams">球队阵容</a>
+</nav>
+
+<section class="hero">
+  <h1>⚽ FIFA WORLD CUP</h1>
+  <h2>Qatar 2022 · 32强全阵容</h2>
+  <div class="badge">2022.11.20 - 12.18</div>
+  <div class="meta">冠军: Argentina &nbsp;|&nbsp; 决赛: 3-3 (点球 4-2) &nbsp;|&nbsp; 48场鏖战</div>
+</section>
+
+<section id="groups">
+  <div class="section-title">📊 分组对阵</div>
+  <div class="groups-grid" id="groups-container"></div>
+</section>
+
+<section id="knockout">
+  <div class="section-title">🏆 淘汰赛</div>
+  <div class="knockout-container" id="knockout-container"></div>
+</section>
+
+<section id="scorers">
+  <div class="section-title">🎯 最佳射手</div>
+  <div class="scorers-table" id="scorers-table"></div>
+</section>
+
+<section id="teams">
+  <div class="section-title">🌍 32强阵容</div>
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all">全部</button>
+    <button class="filter-btn" data-filter="欧洲">欧洲</button>
+    <button class="filter-btn" data-filter="亚洲">亚洲</button>
+    <button class="filter-btn" data-filter="南美洲">南美洲</button>
+    <button class="filter-btn" data-filter="非洲">非洲</button>
+    <button class="filter-btn" data-filter="北美">北美</button>
+  </div>
+  <div class="teams-grid" id="teams-container"></div>
+</section>
+
+<footer>
+  2022 FIFA World Cup Qatar · 32 Nations · 64 Matches · One Champion<br>
+  Built with ❤️ for football fans
+</footer>
+
+<script>
+// ===================== DATA =====================
+const worldCupData = {"edition":"2022 FIFA World Cup Qatar","dates":"2022.11.20 - 12.18","winner":"Argentina","runner_up":"France","third_place":"Croatia","fourth_place":"Morocco","groups":{"A":["Qatar","Ecuador","Senegal","Netherlands"],"B":["England","Iran","USA","Wales"],"C":["Argentina","Saudi Arabia","Mexico","Poland"],"D":["France","Australia","Denmark","Tunisia"],"E":["Spain","Costa Rica","Germany","Japan"],"F":["Belgium","Canada","Morocco","Croatia"],"G":["Brazil","Serbia","Switzerland","Cameroon"],"H":["Portugal","Ghana","Uruguay","South Korea"]},"top_scorers":[{"name":"Kylian Mbappé","country":"France","goals":8,"matches":7,"photo":"🇫🇷"},{"name":"Lionel Messi","country":"Argentina","goals":7,"matches":7,"photo":"🇦🇷"},{"name":"Olivier Giroud","country":"France","goals":4,"matches":6,"photo":"🇫🇷"},{"name":"Julián Álvarez","country":"Argentina","goals":4,"matches":7,"photo":"🇦🇷"},{"name":"Gonçalo Ramos","country":"Portugal","goals":3,"matches":4,"photo":"🇵🇹"},{"name":"Marcus Rashford","country":"England","goals":3,"matches":5,"photo":"🏴󠁧󠁢󠁥󠁮󠁧󠁿"},{"name":"Bukayo Saka","country":"England","goals":3,"matches":4,"photo":"🏴󠁧󠁢󠁥󠁮󠁧󠁿"},{"name":"Cody Gakpo","country":"Netherlands","goals":3,"matches":5,"photo":"🇳🇱"},{"name":"Enner Valencia","country":"Ecuador","goals":3,"matches":3,"photo":"🇪🇨"},{"name":"Richarlison","country":"Brazil","goals":3,"matches":4,"photo":"🇧🇷"}],"knockout":{"round_of_16":[{"match":"1","home":"Netherlands","away":"USA","score":"3-1","winner":"Netherlands"},{"match":"2","home":"Argentina","away":"Australia","score":"2-1","winner":"Argentina"},{"match":"3","home":"Japan","away":"Croatia","score":"1-1 (P:1-3)","winner":"Croatia"},{"match":"4","home":"Brazil","away":"South Korea","score":"4-1","winner":"Brazil"},{"match":"5","home":"England","away":"Senegal","score":"3-0","winner":"England"},{"match":"6","home":"France","away":"Poland","score":"3-1","winner":"France"},{"match":"7","home":"Morocco","away":"Spain","score":"0-0 (P:3-0)","winner":"Morocco"},{"match":"8","home":"Portugal","away":"Switzerland","score":"6-1","winner":"Portugal"}],"quarter_finals":[{"match":"QF1","home":"Netherlands","away":"Argentina","score":"2-2 (P:3-4)","winner":"Argentina"},{"match":"QF2","home":"Croatia","away":"Brazil","score":"1-1 (P:4-2)","winner":"Croatia"},{"match":"QF3","home":"England","away":"France","score":"1-2","winner":"France"},{"match":"QF4","home":"Morocco","away":"Portugal","score":"1-0","winner":"Morocco"}],"semi_finals":[{"match":"SF1","home":"Argentina","away":"Croatia","score":"3-0","winner":"Argentina"},{"match":"SF2","home":"France","away":"Morocco","score":"2-0","winner":"France"}],"third_place":{"home":"Croatia","away":"Morocco","score":"2-1","winner":"Croatia"},"final":{"home":"Argentina","away":"France","score":"3-3 (P:4-2)","winner":"Argentina"}}};
+
+const teams = {"Qatar":{"chinese":"卡塔尔","continent":"亚洲","group":"A","fifa_rank":50,"flag":"🇶🇦","players":[{"name":"Saad Al-Sheeb","pos":"GK","no":1,"age":32,"club":"Al-Sadd"},{"name":"Meshaal Barsham","pos":"GK","no":22,"age":24,"club":"Al-Sadd"},{"name":"Bassam Al-Rawi","pos":"DF","no":15,"age":24,"club":"Al-Duhail"},{"name":"Abdelkarim Hassan","pos":"DF","no":3,"age":29,"club":"Al-Sadd"},{"name":"Pedro Miguel","pos":"DF","no":2,"age":32,"club":"Al-Sadd"},{"name":"Boualem Khoukhi","pos":"DF","no":16,"age":32,"club":"Al-Sadd"},{"name":"Homam Ahmed","pos":"DF","no":14,"age":23,"club":"Al-Gharafa"},{"name":"Karim Boudiaf","pos":"MF","no":12,"age":31,"club":"Al-Duhail"},{"name":"Rodrigo Tabata","pos":"MF","no":10,"age":36,"club":"Al-Sadd"},{"name":"Hassan Al-Haydos","pos":"MF","no":6,"age":31,"club":"Al-Sadd"},{"name":"Akram Afif","pos":"FW","no":11,"age":25,"club":"Al-Sadd"},{"name":"Almoez Ali","pos":"FW","no":19,"age":26,"club":"Al-Duhail"}]},"Ecuador":{"chinese":"厄瓜多尔","continent":"南美洲","group":"A","fifa_rank":44,"flag":"🇪🇨","players":[{"name":"Hernán Galíndez","pos":"GK","no":1,"age":35,"club":"Aucas"},{"name":"Piero Hincapié","pos":"DF","no":3,"age":20,"club":"Bayer Leverkusen"},{"name":"Pervis Estupiñán","pos":"DF","no":18,"age":24,"club":"Brighton"},{"name":"Félix Torres","pos":"DF","no":2,"age":25,"club":"Santos Laguna"},{"name":"Jackson Porozo","pos":"DF","no":25,"age":22,"club":"Troyes"},{"name":"Moisés Caicedo","pos":"MF","no":23,"age":21,"club":"Brighton"},{"name":"Jhegson Méndez","pos":"MF","no":20,"age":25,"club":"LAFC"},{"name":"Carlos Gruezo","pos":"MF","no":8,"age":27,"club":"Augsburg"},{"name":"Gonzalo Plata","pos":"FW","no":19,"age":22,"club":"Valladolid"},{"name":"Enner Valencia","pos":"FW","no":13,"age":33,"club":"Fenerbahçe","star":true},{"name":"Michael Estrada","pos":"FW","no":11,"age":26,"club":"Cruz Azul"}]},"Senegal":{"chinese":"塞内加尔","continent":"非洲","group":"A","fifa_rank":18,"flag":"🇸🇳","players":[{"name":"Édouard Mendy","pos":"GK","no":16,"age":30,"club":"Chelsea"},{"name":"Kalidou Koulibaly","pos":"DF","no":3,"age":31,"club":"Chelsea"},{"name":"Pape Abou Cissé","pos":"DF","no":6,"age":27,"club":"Olympiacos"},{"name":"Youssouf Sabaly","pos":"DF","no":12,"age":29,"club":"Real Betis"},{"name":"Fodé Ballo-Touré","pos":"DF","no":14,"age":25,"club":"Milan"},{"name":"Idrissa Gueye","pos":"MF","no":5,"age":33,"club":"Everton"},{"name":"Nampalys Mendy","pos":"MF","no":6,"age":30,"club":"Leicester"},{"name":"Cheikhou Kouyaté","pos":"MF","no":8,"age":32,"club":"Nottingham Forest"},{"name":"Ismaïla Sarr","pos":"FW","no":23,"age":24,"club":"Watford"},{"name":"Boulaye Dia","pos":"FW","no":9,"age":26,"club":"Salernitana"},{"name":"Sadio Mané","pos":"FW","no":10,"age":30,"club":"Bayern Munich","star":true}]},"Netherlands":{"chinese":"荷兰","continent":"欧洲","group":"A","fifa_rank":8,"flag":"🇳🇱","players":[{"name":"Andries Noppert","pos":"GK","no":23,"age":28,"club":"Heerenveen"},{"name":"Virgil van Dijk","pos":"DF","no":4,"age":31,"club":"Liverpool","star":true},{"name":"Matthijs de Ligt","pos":"DF","no":3,"age":23,"club":"Bayern Munich"},{"name":"Daley Blind","pos":"DF","no":17,"age":32,"club":"Ajax"},{"name":"Denzel Dumfries","pos":"DF","no":22,"age":26,"club":"Inter Milan"},{"name":"Nathan Aké","pos":"DF","no":5,"age":27,"club":"Manchester City"},{"name":"Frenkie de Jong","pos":"MF","no":21,"age":25,"club":"Barcelona"},{"name":"Steven Berghuis","pos":"MF","no":11,"age":30,"club":"Ajax"},{"name":"Cody Gakpo","pos":"FW","no":8,"age":23,"club":"PSV"},{"name":"Memphis Depay","pos":"FW","no":10,"age":28,"club":"Barcelona"},{"name":"Steven Bergwijn","pos":"FW","no":7,"age":25,"club":"Ajax"}]},"England":{"chinese":"英格兰","continent":"欧洲","group":"B","fifa_rank":5,"flag":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","players":[{"name":"Jordan Pickford","pos":"GK","no":1,"age":28,"club":"Everton"},{"name":"John Stones","pos":"DF","no":5,"age":28,"club":"Manchester City"},{"name":"Harry Maguire","pos":"DF","no":6,"age":29,"club":"Manchester United"},{"name":"Kyle Walker","pos":"DF","no":2,"age":32,"club":"Manchester City"},{"name":"Luke Shaw","pos":"DF","no":3,"age":27,"club":"Manchester United"},{"name":"Kieran Trippier","pos":"DF","no":12,"age":32,"club":"Newcastle"},{"name":"Declan Rice","pos":"MF","no":4,"age":23,"club":"West Ham"},{"name":"Jude Bellingham","pos":"MF","no":22,"age":19,"club":"Borussia Dortmund"},{"name":"Mason Mount","pos":"MF","no":19,"age":23,"club":"Chelsea"},{"name":"Harry Kane","pos":"FW","no":9,"age":29,"club":"Tottenham","star":true},{"name":"Bukayo Saka","pos":"FW","no":17,"age":21,"club":"Arsenal"},{"name":"Marcus Rashford","pos":"FW","no":11,"age":25,"club":"Manchester United"},{"name":"Phil Foden","pos":"FW","no":20,"age":22,"club":"Manchester City"}]},"Iran":{"chinese":"伊朗","continent":"亚洲","group":"B","fifa_rank":20,"flag":"🇮🇷","players":[{"name":"Alireza Beiranvand","pos":"GK","no":1,"age":30,"club":"Persepolis"},{"name":"Morteza Pouraliganji","pos":"DF","no":8,"age":30,"club":"Persepolis"},{"name":"Roozbeh Cheshmi","pos":"DF","no":15,"age":29,"club":"Esteghlal"},{"name":"Milad Mohammadi","pos":"DF","no":5,"age":28,"club":"AEK Athens"},{"name":"Ehsan Hajsafi","pos":"DF","no":3,"age":32,"club":"AEK Athens"},{"name":"Saeid Ezatolahi","pos":"MF","no":6,"age":26,"club":"Vejle"},{"name":"Ahmad Nourollahi","pos":"MF","no":21,"age":29,"club":"Shabab Al-Ahli"},{"name":"Ali Karimi","pos":"MF","no":18,"age":24,"club":"Kayserispor"},{"name":"Mehdi Taremi","pos":"FW","no":9,"age":30,"club":"Porto","star":true},{"name":"Sardar Azmoun","pos":"FW","no":20,"age":27,"club":"Bayer Leverkusen"},{"name":"Karim Ansarifard","pos":"FW","no":10,"age":32,"club":"Omonia"}]},"USA":{"chinese":"美国","continent":"北美","group":"B","fifa_rank":16,"flag":"🇺🇸","players":[{"name":"Matt Turner","pos":"GK","no":1,"age":28,"club":"Arsenal"},{"name":"Sergiño Dest","pos":"DF","no":2,"age":22,"club":"Milan"},{"name":"Walker Zimmerman","pos":"DF","no":3,"age":29,"club":"Nashville"},{"name":"Tim Ream","pos":"DF","no":13,"age":35,"club":"Fulham"},{"name":"Antonee Robinson","pos":"DF","no":5,"age":25,"club":"Fulham"},{"name":"Tyler Adams","pos":"MF","no":4,"age":23,"club":"Leeds United"},{"name":"Weston McKennie","pos":"MF","no":8,"age":24,"club":"Juventus"},{"name":"Yunus Musah","pos":"MF","no":6,"age":20,"club":"Valencia"},{"name":"Christian Pulisic","pos":"FW","no":10,"age":24,"club":"Chelsea","star":true},{"name":"Timothy Weah","pos":"FW","no":21,"age":22,"club":"Lille"},{"name":"Josh Sargent","pos":"FW","no":24,"age":23,"club":"Norwich"}]},"Wales":{"chinese":"威尔士","continent":"欧洲","group":"B","fifa_rank":19,"flag":"🏴󠁧󠁢󠁷󠁬󠁳󠁿","players":[{"name":"Wayne Hennessey","pos":"GK","no":1,"age":35,"club":"Nottingham Forest"},{"name":"Ben Davies","pos":"DF","no":4,"age":29,"club":"Tottenham"},{"name":"Chris Mepham","pos":"DF","no":5,"age":25,"club":"Bournemouth"},{"name":"Connor Roberts","pos":"DF","no":14,"age":27,"club":"Burnley"},{"name":"Neco Williams","pos":"DF","no":3,"age":21,"club":"Nottingham Forest"},{"name":"Joe Allen","pos":"MF","no":7,"age":32,"club":"Swansea"},{"name":"Aaron Ramsey","pos":"MF","no":10,"age":31,"club":"Nice"},{"name":"Ethan Ampadu","pos":"MF","no":15,"age":22,"club":"Spezia"},{"name":"Harry Wilson","pos":"MF","no":8,"age":25,"club":"Fulham"},{"name":"Gareth Bale","pos":"FW","no":11,"age":33,"club":"Los Angeles FC","star":true},{"name":"Kieffer Moore","pos":"FW","no":13,"age":30,"club":"Bournemouth"}]},"Argentina":{"chinese":"阿根廷","continent":"南美洲","group":"C","fifa_rank":3,"flag":"🇦🇷","players":[{"name":"Emiliano Martínez","pos":"GK","no":23,"age":30,"club":"Aston Villa"},{"name":"Franco Armani","pos":"GK","no":1,"age":36,"club":"River Plate"},{"name":"Nicolás Otamendi","pos":"DF","no":19,"age":34,"club":"Benfica"},{"name":"Cristian Romero","pos":"DF","no":13,"age":24,"club":"Tottenham"},{"name":"Lisandro Martínez","pos":"DF","no":25,"age":24,"club":"Manchester United"},{"name":"Nahuel Molina","pos":"DF","no":26,"age":24,"club":"Atlético Madrid"},{"name":"Marcos Acuña","pos":"DF","no":8,"age":31,"club":"Sevilla"},{"name":"Enzo Fernández","pos":"MF","no":24,"age":21,"club":"Benfica"},{"name":"Rodrigo De Paul","pos":"MF","no":7,"age":28,"club":"Atlético Madrid"},{"name":"Alexis Mac Allister","pos":"MF","no":20,"age":24,"club":"Brighton"},{"name":"Leandro Paredes","pos":"MF","no":5,"age":28,"club":"Juventus"},{"name":"Ángel Di María","pos":"FW","no":11,"age":34,"club":"Juventus"},{"name":"Lautaro Martínez","pos":"FW","no":22,"age":25,"club":"Inter Milan"},{"name":"Julián Álvarez","pos":"FW","no":9,"age":22,"club":"Manchester City"},{"name":"Lionel Messi","pos":"FW","no":10,"age":35,"club":"Paris Saint-Germain","star":true}]},"Saudi Arabia":{"chinese":"沙特阿拉伯","continent":"亚洲","group":"C","fifa_rank":51,"flag":"🇸🇦","players":[{"name":"Mohammed Al-Owais","pos":"GK","no":21,"age":31,"club":"Al-Hilal"},{"name":"Abdulelah Al-Amri","pos":"DF","no":4,"age":25,"club":"Al-Nassr"},{"name":"Ali Al-Bulaihi","pos":"DF","no":5,"age":33,"club":"Al-Hilal"},{"name":"Yasser Al-Shahrani","pos":"DF","no":13,"age":30,"club":"Al-Hilal"},{"name":"Sultan Al-Ghannam","pos":"DF","no":2,"age":28,"club":"Al-Nassr"},{"name":"Mohamed Kanno","pos":"MF","no":23,"age":28,"club":"Al-Hilal"},{"name":"Abdulellah Al-Malki","pos":"MF","no":12,"age":27,"club":"Al-Hilal"},{"name":"Salem Al-Dawsari","pos":"MF","no":10,"age":31,"club":"Al-Hilal"},{"name":"Saleh Al-Shehri","pos":"FW","no":11,"age":29,"club":"Al-Hilal"},{"name":"Firas Al-Buraikan","pos":"FW","no":9,"age":22,"club":"Al-Fateh"},{"name":"Saudi Al-Hamdan","pos":"FW","no":18,"age":22,"club":"Al-Hilal"}]},"Mexico":{"chinese":"墨西哥","continent":"北美","group":"C","fifa_rank":13,"flag":"🇲🇽","players":[{"name":"Guillermo Ochoa","pos":"GK","no":13,"age":37,"club":"América"},{"name":"Alfredo Talavera","pos":"GK","no":1,"age":40,"club":"Juárez"},{"name":"César Montes","pos":"DF","no":3,"age":25,"club":"Espanyol"},{"name":"Héctor Moreno","pos":"DF","no":15,"age":34,"club":"Monterrey"},{"name":"Jorge Sánchez","pos":"DF","no":19,"age":25,"club":"Ajax"},{"name":"Jesús Gallardo","pos":"DF","no":23,"age":28,"club":"Monterrey"},{"name":"Edson Álvarez","pos":"MF","no":4,"age":25,"club":"Ajax"},{"name":"Héctor Herrera","pos":"MF","no":16,"age":32,"club":"Houston Dynamo"},{"name":"Andrés Guardado","pos":"MF","no":18,"age":36,"club":"Real Betis"},{"name":"Luis Chávez","pos":"MF","no":24,"age":26,"club":"Pachuca"},{"name":"Hirving Lozano","pos":"FW","no":22,"age":27,"club":"Napoli","star":true},{"name":"Raúl Jiménez","pos":"FW","no":9,"age":31,"club":"Wolves"},{"name":"Henry Martín","pos":"FW","no":20,"age":30,"club":"América"}]},"Poland":{"chinese":"波兰","continent":"欧洲","group":"C","fifa_rank":26,"flag":"🇵🇱","players":[{"name":"Wojciech Szczęsny","pos":"GK","no":1,"age":32,"club":"Juventus"},{"name":"Kamil Glik","pos":"DF","no":15,"age":34,"club":"Benevento"},{"name":"Bartosz Bereszyński","pos":"DF","no":18,"age":30,"club":"Sampdoria"},{"name":"Matty Cash","pos":"DF","no":2,"age":25,"club":"Aston Villa"},{"name":"Jakub Kiwior","pos":"DF","no":14,"age":22,"club":"Spezia"},{"name":"Nicola Zalewski","pos":"MF","no":21,"age":20,"club":"Roma"},{"name":"Piotr Zieliński","pos":"MF","no":20,"age":28,"club":"Napoli"},{"name":"Grzegorz Krychowiak","pos":"MF","no":10,"age":32,"club":"Al-Shabab"},{"name":"Sebastian Szymański","pos":"MF","no":19,"age":23,"club":"Feyenoord"},{"name":"Arkadiusz Milik","pos":"FW","no":7,"age":28,"club":"Juventus"},{"name":"Robert Lewandowski","pos":"FW","no":9,"age":34,"club":"Barcelona","star":true}]},"France":{"chinese":"法国","continent":"欧洲","group":"D","fifa_rank":4,"flag":"🇫🇷","players":[{"name":"Hugo Lloris","pos":"GK","no":1,"age":35,"club":"Tottenham"},{"name":"Raphaël Varane","pos":"DF","no":4,"age":29,"club":"Manchester United"},{"name":"Jules Koundé","pos":"DF","no":5,"age":24,"club":"Barcelona"},{"name":"Dayot Upamecano","pos":"DF","no":18,"age":24,"club":"Bayern Munich"},{"name":"Théo Hernández","pos":"DF","no":22,"age":25,"club":"Milan"},{"name":"Benjamin Pavard","pos":"DF","no":2,"age":26,"club":"Bayern Munich"},{"name":"Aurélien Tchouaméni","pos":"MF","no":8,"age":22,"club":"Real Madrid"},{"name":"Adrien Rabiot","pos":"MF","no":14,"age":27,"club":"Juventus"},{"name":"Eduardo Camavinga","pos":"MF","no":6,"age":20,"club":"Real Madrid"},{"name":"Antoine Griezmann","pos":"FW","no":7,"age":31,"club":"Atlético Madrid"},{"name":"Ousmane Dembélé","pos":"FW","no":11,"age":25,"club":"Barcelona"},{"name":"Olivier Giroud","pos":"FW","no":9,"age":36,"club":"Milan"},{"name":"Kylian Mbappé","pos":"FW","no":10,"age":23,"club":"Paris Saint-Germain","star":true}]},"Australia":{"chinese":"澳大利亚","continent":"亚洲","group":"D","fifa_rank":38,"flag":"🇦🇺","players":[{"name":"Mathew Ryan","pos":"GK","no":1,"age":30,"club":"Copenhagen"},{"name":"Milos Degenek","pos":"DF","no":2,"age":28,"club":"Columbus Crew"},{"name":"Bailey Wright","pos":"DF","no":8,"age":30,"club":"Sunderland"},{"name":"Kye Rowles","pos":"DF","no":4,"age":24,"club":"Hearts"},{"name":"Harry Souttar","pos":"DF","no":19,"age":24,"club":"Stoke City"},{"name":"Aziz Behich","pos":"DF","no":16,"age":32,"club":"Dundee United"},{"name":"Aaron Mooy","pos":"MF","no":13,"age":32,"club":"Celtic"},{"name":"Jackson Irvine","pos":"MF","no":22,"age":29,"club":"St. Pauli"},{"name":"Ajdin Hrustic","pos":"MF","no":10,"age":26,"club":"Hellas Verona"},{"name":"Riley McGree","pos":"MF","no":14,"age":24,"club":"Middlesbrough"},{"name":"Mathew Leckie","pos":"FW","no":7,"age":31,"club":"Melbourne City"},{"name":"Mitchell Duke","pos":"FW","no":15,"age":31,"club":"Fagiano Okayama"},{"name":"Jamie Maclaren","pos":"FW","no":9,"age":29,"club":"Melbourne City"}]},"Denmark":{"chinese":"丹麦","continent":"欧洲","group":"D","fifa_rank":10,"flag":"🇩🇰","players":[{"name":"Kasper Schmeichel","pos":"GK","no":1,"age":36,"club":"Nice"},{"name":"Simon Kjær","pos":"DF","no":4,"age":33,"club":"Milan"},{"name":"Joachim Andersen","pos":"DF","no":2,"age":26,"club":"Crystal Palace"},{"name":"Andreas Christensen","pos":"DF","no":6,"age":26,"club":"Barcelona"},{"name":"Joakim Mæhle","pos":"DF","no":5,"age":25,"club":"Atalanta"},{"name":"Rasmus Kristensen","pos":"DF","no":13,"age":25,"club":"Leeds United"},{"name":"Christian Eriksen","pos":"MF","no":10,"age":30,"club":"Manchester United","star":true},{"name":"Pierre-Emile Højbjerg","pos":"MF","no":23,"age":27,"club":"Tottenham"},{"name":"Thomas Delaney","pos":"MF","no":8,"age":31,"club":"Sevilla"},{"name":"Christian Nørgaard","pos":"MF","no":15,"age":28,"club":"Brentford"},{"name":"Yussuf Poulsen","pos":"FW","no":20,"age":28,"club":"Leipzig"},{"name":"Martin Braithwaite","pos":"FW","no":9,"age":31,"club":"Espanyol"},{"name":"Andreas Skov Olsen","pos":"FW","no":11,"age":22,"club":"Club Brugge"}]},"Tunisia":{"chinese":"突尼斯","continent":"非洲","group":"D","fifa_rank":30,"flag":"🇹🇳","players":[{"name":"Aymen Dahmen","pos":"GK","no":26,"age":25,"club":"Sfaxien"},{"name":"Yassine Meriah","pos":"DF","no":6,"age":29,"club":"Esperance"},{"name":"Montassar Talbi","pos":"DF","no":3,"age":24,"club":"Lorient"},{"name":"Dylan Bronn","pos":"DF","no":5,"age":27,"club":"Salernitana"},{"name":"Ali Maâloul","pos":"DF","no":12,"age":32,"club":"Al Ahly"},{"name":"Ellyes Skhiri","pos":"MF","no":10,"age":27,"club":"Köln"},{"name":"Ferjani Sassi","pos":"MF","no":13,"age":30,"club":"Al-Gharafa"},{"name":"Aïssa Laïdouni","pos":"MF","no":14,"age":25,"club":"Ferencváros"},{"name":"Mohamed Ali Ben Romdhane","pos":"MF","no":15,"age":22,"club":"Esperance"},{"name":"Youssef Msakni","pos":"FW","no":28,"age":32,"club":"Al-Arabi"},{"name":"Wahbi Khazri","pos":"FW","no":10,"age":31,"club":"Montpellier"},{"name":"Issam Jebali","pos":"FW","no":9,"age":30,"club":"Odense"}]},"Spain":{"chinese":"西班牙","continent":"欧洲","group":"E","fifa_rank":7,"flag":"🇪🇸","players":[{"name":"Unai Simón","pos":"GK","no":23,"age":25,"club":"Athletic Bilbao"},{"name":"Aymeric Laporte","pos":"DF","no":24,"age":28,"club":"Manchester City"},{"name":"Jordi Alba","pos":"DF","no":18,"age":33,"club":"Barcelona"},{"name":"César Azpilicueta","pos":"DF","no":2,"age":33,"club":"Chelsea"},{"name":"Hugo Guillamón","pos":"DF","no":14,"age":22,"club":"Valencia"},{"name":"Sergio Busquets","pos":"MF","no":5,"age":34,"club":"Barcelona"},{"name":"Gavi","pos":"MF","no":9,"age":18,"club":"Barcelona"},{"name":"Pedri","pos":"MF","no":26,"age":20,"club":"Barcelona"},{"name":"Rodri","pos":"MF","no":16,"age":26,"club":"Manchester City"},{"name":"Dani Olmo","pos":"MF","no":25,"age":24,"club":"Leipzig"},{"name":"Marco Asensio","pos":"FW","no":10,"age":26,"club":"Real Madrid"},{"name":"Ferran Torres","pos":"FW","no":11,"age":22,"club":"Barcelona"},{"name":"Álvaro Morata","pos":"FW","no":7,"age":30,"club":"Atlético Madrid"},{"name":"Pablo Sarabia","pos":"FW","no":22,"age":30,"club":"Paris Saint-Germain"}]},"Costa Rica":{"chinese":"哥斯达黎加","continent":"北美","group":"E","fifa_rank":31,"flag":"🇨🇷","players":[{"name":"Keylor Navas","pos":"GK","no":1,"age":36,"club":"Paris Saint-Germain","star":true},{"name":"Francisco Calvo","pos":"DF","no":15,"age":30,"club":"Konyaspor"},{"name":"Kendall Waston","pos":"DF","no":19,"age":34,"club":"Saprissa"},{"name":"Óscar Duarte","pos":"DF","no":6,"age":33,"club":"Al-Wehda"},{"name":"Bryan Oviedo","pos":"DF","no":8,"age":32,"club":"Real Salt Lake"},{"name":"Keysher Fuller","pos":"DF","no":4,"age":28,"club":"Herediano"},{"name":"Celso Borges","pos":"MF","no":5,"age":34,"club":"Alajuelense"},{"name":"Bryan Ruiz","pos":"MF","no":10,"age":37,"club":"Alajuelense"},{"name":"Yeltsin Tejeda","pos":"MF","no":17,"age":30,"club":"Herediano"},{"name":"Jewison Bennette","pos":"FW","no":9,"age":18,"club":"Sunderland"},{"name":"Joel Campbell","pos":"FW","no":12,"age":30,"club":"León"},{"name":"Anthony Contreras","pos":"FW","no":11,"age":25,"club":"Herediano"}]},"Germany":{"chinese":"德国","continent":"欧洲","group":"E","fifa_rank":11,"flag":"🇩🇪","players":[{"name":"Manuel Neuer","pos":"GK","no":1,"age":36,"club":"Bayern Munich","star":true},{"name":"Antonio Rüdiger","pos":"DF","no":2,"age":29,"club":"Real Madrid"},{"name":"Niklas Süle","pos":"DF","no":15,"age":27,"club":"Borussia Dortmund"},{"name":"David Raum","pos":"DF","no":3,"age":24,"club":"Leipzig"},{"name":"Thilo Kehrer","pos":"DF","no":5,"age":26,"club":"West Ham"},{"name":"Nico Schlotterbeck","pos":"DF","no":23,"age":22,"club":"Borussia Dortmund"},{"name":"Joshua Kimmich","pos":"MF","no":6,"age":27,"club":"Bayern Munich"},{"name":"Leon Goretzka","pos":"MF","no":8,"age":27,"club":"Bayern Munich"},{"name":"İlkay Gündoğan","pos":"MF","no":21,"age":32,"club":"Manchester City"},{"name":"Jamal Musiala","pos":"MF","no":14,"age":19,"club":"Bayern Munich"},{"name":"Thomas Müller","pos":"FW","no":13,"age":33,"club":"Bayern Munich"},{"name":"Leroy Sané","pos":"FW","no":19,"age":26,"club":"Bayern Munich"},{"name":"Serge Gnabry","pos":"FW","no":10,"age":27,"club":"Bayern Munich"},{"name":"Niclas Füllkrug","pos":"FW","no":9,"age":29,"club":"Werder Bremen"},{"name":"Mario Götze","pos":"FW","no":11,"age":30,"club":"Eintracht Frankfurt"}]},"Japan":{"chinese":"日本","continent":"亚洲","group":"E","fifa_rank":24,"flag":"🇯🇵","players":[{"name":"Shūichi Gonda","pos":"GK","no":12,"age":33,"club":"Shimizu S-Pulse"},{"name":"Eiji Kawashima","pos":"GK","no":1,"age":39,"club":"Strasbourg"},{"name":"Maya Yoshida","pos":"DF","no":22,"age":34,"club":"Schalke 04"},{"name":"Yuto Nagatomo","pos":"DF","no":5,"age":36,"club":"FC Tokyo"},{"name":"Ko Itakura","pos":"DF","no":4,"age":25,"club":"Borussia M'gladbach"},{"name":"Hiroki Sakai","pos":"DF","no":19,"age":32,"club":"Urawa Reds"},{"name":"Takehiro Tomiyasu","pos":"DF","no":16,"age":24,"club":"Arsenal"},{"name":"Wataru Endo","pos":"MF","no":6,"age":30,"club":"Stuttgart"},{"name":"Hidemasa Morita","pos":"MF","no":13,"age":27,"club":"Sporting CP"},{"name":"Daichi Kamada","pos":"MF","no":15,"age":26,"club":"Eintracht Frankfurt"},{"name":"Ritsu Dōan","pos":"FW","no":10,"age":24,"club":"Freiburg"},{"name":"Kaoru Mitoma","pos":"FW","no":9,"age":25,"club":"Brighton"},{"name":"Takuma Asano","pos":"FW","no":18,"age":28,"club":"Bochum"},{"name":"Junya Ito","pos":"FW","no":14,"age":29,"club":"Reims"},{"name":"Ayase Ueda","pos":"FW","no":21,"age":24,"club":"Cercle Brugge"}]},"Belgium":{"chinese":"比利时","continent":"欧洲","group":"F","fifa_rank":2,"flag":"🇧🇪","players":[{"name":"Thibaut Courtois","pos":"GK","no":1,"age":30,"club":"Real Madrid"},{"name":"Toby Alderweireld","pos":"DF","no":2,"age":33,"club":"Antwerp"},{"name":"Jan Vertonghen","pos":"DF","no":5,"age":35,"club":"Benfica"},{"name":"Leander Dendoncker","pos":"DF","no":19,"age":27,"club":"Aston Villa"},{"name":"Timothy Castagne","pos":"DF","no":21,"age":26,"club":"Leicester"},{"name":"Zeno Debast","pos":"DF","no":26,"age":19,"club":"Anderlecht"},{"name":"Kevin De Bruyne","pos":"MF","no":7,"age":31,"club":"Manchester City","star":true},{"name":"Youri Tielemans","pos":"MF","no":8,"age":25,"club":"Leicester"},{"name":"Axel Witsel","pos":"MF","no":6,"age":33,"club":"Atlético Madrid"},{"name":"Yannick Carrasco","pos":"MF","no":11,"age":29,"club":"Atlético Madrid"},{"name":"Thorgan Hazard","pos":"MF","no":16,"age":29,"club":"Borussia Dortmund"},{"name":"Romelu Lukaku","pos":"FW","no":9,"age":29,"club":"Inter Milan"},{"name":"Eden Hazard","pos":"FW","no":10,"age":31,"club":"Real Madrid"},{"name":"Dries Mertens","pos":"FW","no":14,"age":35,"club":"Galatasaray"}]},"Canada":{"chinese":"加拿大","continent":"北美","group":"F","fifa_rank":41,"flag":"🇨🇦","players":[{"name":"Milan Borjan","pos":"GK","no":18,"age":35,"club":"Red Star"},{"name":"Kamal Miller","pos":"DF","no":4,"age":25,"club":"CF Montréal"},{"name":"Steven Vitória","pos":"DF","no":5,"age":35,"club":"Chaves"},{"name":"Alistair Johnston","pos":"DF","no":2,"age":24,"club":"CF Montréal"},{"name":"Sam Adekugbe","pos":"DF","no":3,"age":27,"club":"Hatayspor"},{"name":"Samuel Piette","pos":"MF","no":6,"age":28,"club":"CF Montréal"},{"name":"Stephen Eustáquio","pos":"MF","no":7,"age":26,"club":"Porto"},{"name":"Atiba Hutchinson","pos":"MF","no":13,"age":39,"club":"Beşiktaş"},{"name":"Mark-Anthony Kaye","pos":"MF","no":14,"age":27,"club":"Toronto"},{"name":"Jonathan Osorio","pos":"MF","no":21,"age":30,"club":"Toronto"},{"name":"Alphonso Davies","pos":"FW","no":19,"age":22,"club":"Bayern Munich","star":true},{"name":"Cyle Larin","pos":"FW","no":17,"age":27,"club":"Club Brugge"},{"name":"Jonathan David","pos":"FW","no":20,"age":22,"club":"Lille"}]},"Morocco":{"chinese":"摩洛哥","continent":"非洲","group":"F","fifa_rank":22,"flag":"🇲🇦","players":[{"name":"Yassine Bounou","pos":"GK","no":1,"age":31,"club":"Sevilla"},{"name":"Achraf Hakimi","pos":"DF","no":2,"age":24,"club":"Paris Saint-Germain","star":true},{"name":"Nayef Aguerd","pos":"DF","no":5,"age":26,"club":"West Ham"},{"name":"Romain Saïss","pos":"DF","no":6,"age":32,"club":"Beşiktaş"},{"name":"Noussair Mazraoui","pos":"DF","no":3,"age":25,"club":"Bayern Munich"},{"name":"Sofyan Amrabat","pos":"MF","no":4,"age":26,"club":"Fiorentina"},{"name":"Azzedine Ounahi","pos":"MF","no":8,"age":22,"club":"Angers"},{"name":"Selim Amallah","pos":"MF","no":15,"age":25,"club":"Standard Liège"},{"name":"Yahya Jabrane","pos":"MF","no":11,"age":31,"club":"Wydad Casablanca"},{"name":"Hakim Ziyech","pos":"FW","no":7,"age":29,"club":"Chelsea","star":true},{"name":"Youssef En-Nesyri","pos":"FW","no":19,"age":25,"club":"Sevilla"},{"name":"Sofiane Boufal","pos":"FW","no":17,"age":29,"club":"Angers"}]},"Croatia":{"chinese":"克罗地亚","continent":"欧洲","group":"F","fifa_rank":12,"flag":"🇭🇷","players":[{"name":"Dominik Livaković","pos":"GK","no":1,"age":27,"club":"Dinamo Zagreb"},{"name":"Dejan Lovren","pos":"DF","no":6,"age":33,"club":"Zenit"},{"name":"Joško Gvardiol","pos":"DF","no":20,"age":20,"club":"Leipzig"},{"name":"Borna Sosa","pos":"DF","no":19,"age":24,"club":"Stuttgart"},{"name":"Josip Juranović","pos":"DF","no":22,"age":27,"club":"Celtic"},{"name":"Domagoj Vida","pos":"DF","no":21,"age":33,"club":"AEK Athens"},{"name":"Luka Modrić","pos":"MF","no":10,"age":37,"club":"Real Madrid","star":true},{"name":"Mateo Kovačić","pos":"MF","no":8,"age":28,"club":"Chelsea"},{"name":"Marcelo Brozović","pos":"MF","no":11,"age":30,"club":"Inter Milan"},{"name":"Mario Pašalić","pos":"MF","no":15,"age":27,"club":"Atalanta"},{"name":"Nikola Vlašić","pos":"MF","no":13,"age":25,"club":"Torino"},{"name":"Ivan Perišić","pos":"FW","no":4,"age":33,"club":"Tottenham"},{"name":"Andrej Kramarić","pos":"FW","no":9,"age":31,"club":"Hoffenheim"},{"name":"Marko Livaja","pos":"FW","no":14,"age":29,"club":"Hajduk Split"}]},"Brazil":{"chinese":"巴西","continent":"南美洲","group":"G","fifa_rank":1,"flag":"🇧🇷","players":[{"name":"Alisson","pos":"GK","no":1,"age":30,"club":"Liverpool"},{"name":"Ederson","pos":"GK","no":23,"age":29,"club":"Manchester City"},{"name":"Marquinhos","pos":"DF","no":4,"age":28,"club":"Paris Saint-Germain"},{"name":"Thiago Silva","pos":"DF","no":3,"age":38,"club":"Chelsea"},{"name":"Danilo","pos":"DF","no":2,"age":31,"club":"Juventus"},{"name":"Alex Sandro","pos":"DF","no":6,"age":31,"club":"Juventus"},{"name":"Éder Militão","pos":"DF","no":14,"age":24,"club":"Real Madrid"},{"name":"Casemiro","pos":"MF","no":5,"age":30,"club":"Manchester United"},{"name":"Lucas Paquetá","pos":"MF","no":7,"age":25,"club":"West Ham"},{"name":"Fred","pos":"MF","no":8,"age":29,"club":"Manchester United"},{"name":"Bruno Guimarães","pos":"MF","no":17,"age":25,"club":"Newcastle"},{"name":"Neymar","pos":"FW","no":10,"age":30,"club":"Paris Saint-Germain","star":true},{"name":"Vinícius Júnior","pos":"FW","no":20,"age":22,"club":"Real Madrid"},{"name":"Richarlison","pos":"FW","no":9,"age":25,"club":"Tottenham"},{"name":"Gabriel Jesus","pos":"FW","no":18,"age":25,"club":"Arsenal"},{"name":"Raphinha","pos":"FW","no":11,"age":26,"club":"Barcelona"}]},"Serbia":{"chinese":"塞尔维亚","continent":"欧洲","group":"G","fifa_rank":21,"flag":"🇷🇸","players":[{"name":"Vanja Milinković-Savić","pos":"GK","no":1,"age":25,"club":"Torino"},{"name":"Strahinja Pavlović","pos":"DF","no":4,"age":21,"club":"Red Bull Salzburg"},{"name":"Nikola Milenković","pos":"DF","no":13,"age":25,"club":"Fiorentina"},{"name":"Miloš Veljković","pos":"DF","no":5,"age":27,"club":"Werder Bremen"},{"name":"Aleksandar Dragović","pos":"DF","no":6,"age":31,"club":"Red Star"},{"name":"Filip Kostić","pos":"MF","no":17,"age":30,"club":"Juventus"},{"name":"Sergej Milinković-Savić","pos":"MF","no":20,"age":27,"club":"Lazio"},{"name":"Nemanja Gudelj","pos":"MF","no":8,"age":31,"club":"Sevilla"},{"name":"Saša Lukić","pos":"MF","no":16,"age":26,"club":"Torino"},{"name":"Andrija Živković","pos":"MF","no":14,"age":26,"club":"PAOK"},{"name":"Dušan Vlahović","pos":"FW","no":18,"age":22,"club":"Juventus"},{"name":"Aleksandar Mitrović","pos":"FW","no":9,"age":28,"club":"Fulham","star":true},{"name":"Dušan Tadić","pos":"FW","no":10,"age":34,"club":"Ajax"}]},"Switzerland":{"chinese":"瑞士","continent":"欧洲","group":"G","fifa_rank":15,"flag":"🇨🇭","players":[{"name":"Yann Sommer","pos":"GK","no":1,"age":34,"club":"Borussia M'gladbach"},{"name":"Jonas Omlin","pos":"GK","no":21,"age":28,"club":"Montpellier"},{"name":"Nico Elvedi","pos":"DF","no":4,"age":26,"club":"Borussia M'gladbach"},{"name":"Manuel Akanji","pos":"DF","no":5,"age":27,"club":"Manchester City"},{"name":"Silvan Widmer","pos":"DF","no":20,"age":29,"club":"Mainz"},{"name":"Ricardo Rodriguez","pos":"DF","no":13,"age":30,"club":"Torino"},{"name":"Fabian Schär","pos":"DF","no":22,"age":30,"club":"Newcastle"},{"name":"Granit Xhaka","pos":"MF","no":10,"age":30,"club":"Arsenal","star":true},{"name":"Remo Freuler","pos":"MF","no":8,"age":30,"club":"Nottingham Forest"},{"name":"Denis Zakaria","pos":"MF","no":6,"age":26,"club":"Chelsea"},{"name":"Ruben Vargas","pos":"FW","no":17,"age":24,"club":"Augsburg"},{"name":"Xherdan Shaqiri","pos":"FW","no":23,"age":31,"club":"Chicago Fire"},{"name":"Breel Embolo","pos":"FW","no":7,"age":25,"club":"Monaco"},{"name":"Haris Seferović","pos":"FW","no":9,"age":30,"club":"Galatasaray"}]},"Cameroon":{"chinese":"喀麦隆","continent":"非洲","group":"G","fifa_rank":43,"flag":"🇨🇲","players":[{"name":"André Onana","pos":"GK","no":23,"age":26,"club":"Inter Milan"},{"name":"Devis Epassy","pos":"GK","no":16,"age":29,"club":"Abha"},{"name":"Jean-Charles Castelletto","pos":"DF","no":21,"age":27,"club":"Nantes"},{"name":"Nicolas N'Koulou","pos":"DF","no":3,"age":32,"club":"Aris"},{"name":"Collins Fai","pos":"DF","no":19,"age":30,"club":"Al-Tai"},{"name":"Nouhou Tolo","pos":"DF","no":25,"age":25,"club":"Seattle Sounders"},{"name":"André-Frank Zambo Anguissa","pos":"MF","no":8,"age":27,"club":"Napoli"},{"name":"Samuel Oum Gouet","pos":"MF","no":18,"age":24,"club":"Mechelen"},{"name":"Martin Hongla","pos":"MF","no":6,"age":24,"club":"Hellas Verona"},{"name":"Olivier Mbaizo","pos":"MF","no":17,"age":25,"club":"Philadelphia Union"},{"name":"Vincent Aboubakar","pos":"FW","no":10,"age":30,"club":"Al-Nassr","star":true},{"name":"Karl Toko Ekambi","pos":"FW","no":12,"age":30,"club":"Lyon"},{"name":"Eric Maxim Choupo-Moting","pos":"FW","no":13,"age":33,"club":"Bayern Munich"}]},"Portugal":{"chinese":"葡萄牙","continent":"欧洲","group":"H","fifa_rank":9,"flag":"🇵🇹","players":[{"name":"Diogo Costa","pos":"GK","no":22,"age":23,"club":"Porto"},{"name":"Rui Patrício","pos":"GK","no":1,"age":34,"club":"Roma"},{"name":"Rúben Dias","pos":"DF","no":4,"age":25,"club":"Manchester City"},{"name":"Pepe","pos":"DF","no":3,"age":39,"club":"Porto"},{"name":"João Cancelo","pos":"DF","no":20,"age":28,"club":"Manchester City"},{"name":"Nuno Mendes","pos":"DF","no":25,"age":20,"club":"Paris Saint-Germain"},{"name":"Danilo Pereira","pos":"DF","no":13,"age":31,"club":"Paris Saint-Germain"},{"name":"Raphaël Guerreiro","pos":"DF","no":5,"age":28,"club":"Borussia Dortmund"},{"name":"Bruno Fernandes","pos":"MF","no":8,"age":28,"club":"Manchester United"},{"name":"Bernardo Silva","pos":"MF","no":10,"age":28,"club":"Manchester City"},{"name":"João Félix","pos":"MF","no":11,"age":23,"club":"Atlético Madrid"},{"name":"Rúben Neves","pos":"MF","no":18,"age":25,"club":"Wolves"},{"name":"Otávio","pos":"MF","no":25,"age":27,"club":"Porto"},{"name":"Cristiano Ronaldo","pos":"FW","no":7,"age":37,"club":"Manchester United","star":true},{"name":"Rafael Leão","pos":"FW","no":15,"age":23,"club":"Milan"},{"name":"Gonçalo Ramos","pos":"FW","no":26,"age":21,"club":"Benfica"}]},"Ghana":{"chinese":"加纳","continent":"非洲","group":"H","fifa_rank":61,"flag":"🇬🇭","players":[{"name":"Lawrence Ati-Zigi","pos":"GK","no":1,"age":26,"club":"St. Gallen"},{"name":"Daniel Amartey","pos":"DF","no":18,"age":27,"club":"Leicester"},{"name":"Alexander Djiku","pos":"DF","no":23,"age":28,"club":"Strasbourg"},{"name":"Mohammed Salisu","pos":"DF","no":4,"age":23,"club":"Southampton"},{"name":"Tariq Lamptey","pos":"DF","no":2,"age":22,"club":"Brighton"},{"name":"Gideon Mensah","pos":"DF","no":14,"age":24,"club":"Auxerre"},{"name":"Thomas Partey","pos":"MF","no":5,"age":29,"club":"Arsenal","star":true},{"name":"Salis Abdul Samed","pos":"MF","no":21,"age":22,"club":"Lens"},{"name":"Mohammed Kudus","pos":"MF","no":20,"age":22,"club":"Ajax"},{"name":"André Ayew","pos":"MF","no":10,"age":32,"club":"Nottingham Forest"},{"name":"Jordan Ayew","pos":"FW","no":9,"age":31,"club":"Crystal Palace"},{"name":"Iñaki Williams","pos":"FW","no":19,"age":28,"club":"Athletic Bilbao"},{"name":"Kamaldeen Sulemana","pos":"FW","no":22,"age":20,"club":"Rennes"}]},"Uruguay":{"chinese":"乌拉圭","continent":"南美洲","group":"H","fifa_rank":14,"flag":"🇺🇾","players":[{"name":"Sergio Rochet","pos":"GK","no":23,"age":29,"club":"Nacional"},{"name":"Ronald Araújo","pos":"DF","no":4,"age":23,"club":"Barcelona"},{"name":"José María Giménez","pos":"DF","no":2,"age":27,"club":"Atlético Madrid"},{"name":"Diego Godín","pos":"DF","no":3,"age":36,"club":"Vélez Sarsfield"},{"name":"Martín Cáceres","pos":"DF","no":22,"age":35,"club":"LA Galaxy"},{"name":"Mathías Olivera","pos":"DF","no":16,"age":25,"club":"Napoli"},{"name":"Matías Vecino","pos":"MF","no":15,"age":31,"club":"Lazio"},{"name":"Rodrigo Bentancur","pos":"MF","no":6,"age":25,"club":"Tottenham"},{"name":"Federico Valverde","pos":"MF","no":15,"age":24,"club":"Real Madrid","star":true},{"name":"Nicolás de la Cruz","pos":"MF","no":7,"age":25,"club":"River Plate"},{"name":"Giorgian de Arrascaeta","pos":"MF","no":10,"age":28,"club":"Flamengo"},{"name":"Darwin Núñez","pos":"FW","no":11,"age":23,"club":"Liverpool"},{"name":"Edinson Cavani","pos":"FW","no":21,"age":35,"club":"Valencia"},{"name":"Luis Suárez","pos":"FW","no":9,"age":35,"club":"Nacional","star":true}]},"South Korea":{"chinese":"韩国","continent":"亚洲","group":"H","fifa_rank":28,"flag":"🇰🇷","players":[{"name":"Kim Seung-gyu","pos":"GK","no":1,"age":32,"club":"Al-Shabab"},{"name":"Jo Hyeon-woo","pos":"GK","no":21,"age":31,"club":"Ulsan Hyundai"},{"name":"Kim Min-jae","pos":"DF","no":4,"age":26,"club":"Napoli","star":true},{"name":"Kim Young-gwon","pos":"DF","no":19,"age":32,"club":"Ulsan Hyundai"},{"name":"Kim Jin-su","pos":"DF","no":3,"age":30,"club":"Jeonbuk Hyundai"},{"name":"Yoon Jong-gyu","pos":"DF","no":24,"age":25,"club":"FC Seoul"},{"name":"Jung Woo-young","pos":"MF","no":5,"age":32,"club":"Al-Sadd"},{"name":"Hwang In-beom","pos":"MF","no":6,"age":26,"club":"Olympiacos"},{"name":"Lee Jae-sung","pos":"MF","no":10,"age":30,"club":"Mainz"},{"name":"Kwon Chang-hoon","pos":"MF","no":22,"age":28,"club":"Gimcheon Sangmu"},{"name":"Na Sang-ho","pos":"MF","no":17,"age":26,"club":"FC Seoul"},{"name":"Hwang Hee-chan","pos":"FW","no":11,"age":26,"club":"Wolves"},{"name":"Cho Gue-sung","pos":"FW","no":9,"age":24,"club":"Jeonbuk Hyundai"},{"name":"Son Heung-min","pos":"FW","no":7,"age":30,"club":"Tottenham","star":true}]}};
+
+// ===================== RENDER =====================
+
+// Groups
+const groupsContainer = document.getElementById('groups-container');
+Object.entries(worldCupData.groups).forEach(([group, teamNames]) => {
+  const card = document.createElement('div');
+  card.className = 'group-card';
+  let html = `<div class="group-label">Group ${group}</div>`;
+  teamNames.forEach(name => {
+    const t = teams[name];
+    if (t) html += `
+      <div class="team-row">
+        <span class="flag">${t.flag}</span>
+        <div class="name">${t.chinese}<small>${name}</small></div>
+        <span class="fifa">FIFA #${t.fifa_rank}</span>
+      </div>`;
+  });
+  card.innerHTML = html;
+  groupsContainer.appendChild(card);
+});
+
+// Knockout
+const knockoutContainer = document.getElementById('knockout-container');
+const knockout = worldCupData.knockout;
+
+function renderRound(title, matches, isFinal) {
+  const div = document.createElement('div');
+  div.className = 'knockout-round';
+  let html = `<div class="round-title">${title}</div>`;
+  matches.forEach(m => {
+    const isFinalMatch = isFinal && m.home === 'Argentina' && m.away === 'France';
+    html += `
+      <div class="knockout-match ${isFinalMatch ? 'final-match' : ''}">
+        <div class="teams">
+          <span>${teams[m.home]?.flag || ''} ${m.home}</span>
+          <span class="score">${m.score}</span>
+          <span>${m.away} ${teams[m.away]?.flag || ''}</span>
+        </div>
+        <div class="winner">Winner: ${m.winner}</div>
+      </div>`;
+  });
+  div.innerHTML = html;
+  knockoutContainer.appendChild(div);
+}
+
+renderRound('Round of 16', knockout.round_of_16);
+renderRound('Quarter Finals', knockout.quarter_finals);
+renderRound('Semi Finals', knockout.semi_finals);
+const thirdDiv = document.createElement('div');
+thirdDiv.className = 'knockout-round';
+thirdDiv.innerHTML = `
+  <div class="round-title">Third Place</div>
+  <div class="knockout-match">
+    <div class="teams">
+      <span>${teams[knockout.third_place.home]?.flag || ''} ${knockout.third_place.home}</span>
+      <span class="score">${knockout.third_place.score}</span>
+      <span>${knockout.third_place.away} ${teams[knockout.third_place.away]?.flag || ''}</span>
+    </div>
+    <div class="winner">Winner: ${knockout.third_place.winner}</div>
+  </div>`;
+knockoutContainer.appendChild(thirdDiv);
+const finalDiv = document.createElement('div');
+finalDiv.className = 'knockout-round';
+finalDiv.innerHTML = `
+  <div class="round-title">🏆 Final</div>
+  <div class="knockout-match final-match">
+    <div class="teams">
+      <span>${teams[knockout.final.home]?.flag || ''} ${knockout.final.home}</span>
+      <span class="score">${knockout.final.score}</span>
+      <span>${knockout.final.away} ${teams[knockout.final.away]?.flag || ''}</span>
+    </div>
+    <div class="winner">🏆 Champion: ${knockout.final.winner}</div>
+  </div>`;
+knockoutContainer.appendChild(finalDiv);
+
+// Scorers
+const scorersTable = document.getElementById('scorers-table');
+let scorersHtml = `
+  <div class="row header">
+    <div></div>
+    <div>Player</div>
+    <div>Goals</div>
+    <div>Matches</div>
+    <div>Rank</div>
+  </div>`;
+worldCupData.top_scorers.forEach((s, i) => {
+  scorersHtml += `
+    <div class="row">
+      <div class="rank">${i + 1}</div>
+      <div class="player-info">
+        <div class="avatar">${s.photo}</div>
+        <div>
+          <div style="font-weight:700">${s.name}</div>
+          <div style="font-size:11px;color:#888">${s.country}</div>
+        </div>
+      </div>
+      <div class="goals">${s.goals}</div>
+      <div class="matches">${s.matches}</div>
+      <div class="eff">${i < 3 ? '⭐' : ''}</div>
+    </div>`;
+});
+scorersTable.innerHTML = scorersHtml;
+
+// Teams
+const teamsContainer = document.getElementById('teams-container');
+function renderTeams(filter) {
+  teamsContainer.innerHTML = '';
+  Object.entries(teams).forEach(([key, team]) => {
+    if (filter !== 'all' && team.continent !== filter) return;
+    const card = document.createElement('div');
+    card.className = 'team-card';
+    card.dataset.continent = team.continent;
+    let playersHtml = '';
+    team.players.forEach(p => {
+      const starClass = p.star ? 'star' : '';
+      const initials = p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      playersHtml += `
+        <div class="player-card ${starClass}">
+          <div class="headshot">${initials}</div>
+          <div class="p-pos pos-${p.pos}">${p.pos}</div>
+          <div class="p-name">${p.name}</div>
+          <div class="p-meta">#${p.no} · ${p.age}岁<br>${p.club}</div>
+        </div>`;
+    });
+    card.innerHTML = `
+      <div class="team-header" onclick="toggleTeam(this)">
+        <div class="flag">${team.flag}</div>
+        <div class="info">
+          <div class="name">${team.chinese}<span>${key}</span></div>
+          <div class="meta">
+            <span>Group ${team.group}</span>
+            <span>${team.continent}</span>
+            <span>FIFA #${team.fifa_rank}</span>
+            <span>${team.players.length} Players</span>
+          </div>
+        </div>
+        <div class="expand-icon">▼</div>
+      </div>
+      <div class="players-list">
+        <div class="player-grid">${playersHtml}</div>
+      </div>`;
+    teamsContainer.appendChild(card);
+  });
+}
+renderTeams('all');
+
+function toggleTeam(header) {
+  const card = header.closest('.team-card');
+  card.classList.toggle('expanded');
+}
+
+// Filter
+const filterBtns = document.querySelectorAll('.filter-btn');
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTeams(btn.dataset.filter);
+  });
+});
+
+// Navigation
+const navLinks = document.querySelectorAll('nav a');
+navLinks.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    navLinks.forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    document.querySelector(link.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+// ===================== WEBGL FOOTBALL =====================
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+// Football geometry (icosahedron with black/white materials)
+const footballGroup = new THREE.Group();
+const geo = new THREE.IcosahedronGeometry(2.5, 1);
+const whiteMat = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 80, flatShading: true });
+const blackMat = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 80, flatShading: true });
+
+const mesh = new THREE.Mesh(geo, whiteMat);
+footballGroup.add(mesh);
+
+// Add black pentagon-like faces
+const icoGeo = new THREE.IcosahedronGeometry(2.48, 1);
+const edges = new THREE.EdgesGeometry(icoGeo);
+const lineMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+const wireframe = new THREE.LineSegments(edges, lineMat);
+footballGroup.add(wireframe);
+
+scene.add(footballGroup);
+
+// Particles
+const particleCount = 200;
+const particleGeo = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount * 3);
+const speeds = [];
+for (let i = 0; i < particleCount; i++) {
+  positions[i*3] = (Math.random() - 0.5) * 30;
+  positions[i*3+1] = (Math.random() - 0.5) * 30;
+  positions[i*3+2] = (Math.random() - 0.5) * 30;
+  speeds.push({ x: (Math.random()-0.5)*0.02, y: Math.random()*0.02+0.01, z: (Math.random()-0.5)*0.02 });
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+const particleMat = new THREE.PointsMaterial({ color: 0x00a859, size: 0.08, transparent: true, opacity: 0.6 });
+const particles = new THREE.Points(particleGeo, particleMat);
+scene.add(particles);
+
+// Lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 10, 7);
+scene.add(dirLight);
+const pointLight = new THREE.PointLight(0x8a1538, 0.5, 20);
+pointLight.position.set(-5, 3, -5);
+scene.add(pointLight);
+const greenLight = new THREE.PointLight(0x00a859, 0.4, 20);
+greenLight.position.set(5, -3, 5);
+scene.add(greenLight);
+
+camera.position.z = 12;
+
+// Animation
+let mouseX = 0, mouseY = 0;
+document.addEventListener('mousemove', e => {
+  mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+  mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  
+  footballGroup.rotation.x += 0.005;
+  footballGroup.rotation.y += 0.008;
+  footballGroup.position.x = mouseX * 0.5;
+  footballGroup.position.y = -mouseY * 0.5;
+  
+  const pos = particles.geometry.attributes.position.array;
+  for (let i = 0; i < particleCount; i++) {
+    pos[i*3] += speeds[i].x;
+    pos[i*3+1] += speeds[i].y;
+    pos[i*3+2] += speeds[i].z;
+    if (pos[i*3+1] > 15) pos[i*3+1] = -15;
+    if (pos[i*3] > 15 || pos[i*3] < -15) pos[i*3] *= -1;
+    if (pos[i*3+2] > 15 || pos[i*3+2] < -15) pos[i*3+2] *= -1;
+  }
+  particles.geometry.attributes.position.needsUpdate = true;
+  particles.rotation.y += 0.002;
+  
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
